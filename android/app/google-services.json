@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "525052102230",
+    "project_id": "falcons-attendance",
+    "storage_bucket": "falcons-attendance.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:525052102230:android:e43258b7038297c79dddf7",
+        "android_client_info": {
+          "package_name": "com.example.attendance_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUd7t71QhI4ATIQil7atmg8_l61NYvfeU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
