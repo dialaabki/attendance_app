@@ -1,26 +1,26 @@
-import 'package:attendance_app/core/common_widgets/employee_page_shell.dart';
+import 'package:attendance_app/core/common_widgets/hr_page_shell.dart'; // <-- Import the HR shell
 import 'package:attendance_app/core/usecases/usecase.dart';
 import 'package:attendance_app/features/auth/business/usecases/get_current_user.dart';
 import 'package:attendance_app/features/attendance/business/entities/attendance_record_entity.dart';
 import 'package:attendance_app/features/attendance/business/usecases/get_employee_timesheet.dart';
-import 'package:attendance_app/features/attendance/presentation/widgets/timesheet_view.dart'; // <-- Import the new widget
+import 'package:attendance_app/features/attendance/presentation/widgets/timesheet_view.dart';
 import 'package:attendance_app/service_locator.dart';
 import 'package:flutter/material.dart';
 
-class EmployeeTimesheetPage extends StatefulWidget {
-  const EmployeeTimesheetPage({super.key});
+class HrTimesheetPage extends StatefulWidget {
+  const HrTimesheetPage({super.key});
   @override
-  _EmployeeTimesheetPageState createState() => _EmployeeTimesheetPageState();
+  _HrTimesheetPageState createState() => _HrTimesheetPageState();
 }
 
-class _EmployeeTimesheetPageState extends State<EmployeeTimesheetPage> {
-  // All state and logic methods remain here
+class _HrTimesheetPageState extends State<HrTimesheetPage> {
+  // All state and logic is identical to the employee page
   List<DateTime> _dateRange = [];
   DateTime _selectedDate = DateTime.now();
   AttendanceRecordEntity? _attendanceData;
   bool _isLoading = true;
   String? _userId;
-  String _userName = "User";
+  String _userName = "HR";
 
   @override
   void initState() {
@@ -80,10 +80,10 @@ class _EmployeeTimesheetPageState extends State<EmployeeTimesheetPage> {
 
   @override
   Widget build(BuildContext context) {
-    return EmployeePageShell( // <-- Uses the correct Employee shell
-      selectedNavIndex: 1,
+    return HrPageShell( 
+      selectedNavIndex: 2, 
       userName: _userName,
-      child: TimesheetView( // <-- Use the reusable widget
+      child: TimesheetView(
         isLoading: _isLoading,
         attendanceData: _attendanceData,
         dateRange: _dateRange,

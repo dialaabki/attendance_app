@@ -4,13 +4,12 @@ import 'package:attendance_app/core/usecases/usecase.dart';
 import 'package:attendance_app/features/auth/business/entities/user_entity.dart';
 import 'package:attendance_app/features/auth/business/usecases/get_current_user.dart';
 import 'package:attendance_app/features/auth/business/usecases/logout_user.dart';
+import 'package:attendance_app/features/user_management/presentation/pages/salary_report_page.dart'; // <-- Add this import
 import 'package:attendance_app/service_locator.dart';
 import 'package:flutter/material.dart';
 
 class EmployeeProfilePage extends StatefulWidget {
-  // Flag to determine which shell to use
   final bool isHr;
-
   const EmployeeProfilePage({super.key, this.isHr = false});
   
   @override
@@ -49,7 +48,16 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     }
   }
 
-  // Helper method to build the body content to avoid duplication
+  void _navigateToSalaryReport() {
+    if (_userData != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SalaryReportPage(user: _userData!),
+        ),
+      );
+    }
+  }
+
   Widget _buildContent() {
     return _isLoading
       ? const Center(child: CircularProgressIndicator())
@@ -66,8 +74,22 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 const Divider(),
                 _buildInfoTile(icon: Icons.work_outline, label: 'Employee Type', value: _userData!.type),
                 const Divider(),
-                _buildInfoTile(icon: Icons.attach_money, label: 'Salary', value: _userData!.salary.toStringAsFixed(2)),
-                const SizedBox(height: 50),
+                _buildInfoTile(icon: Icons.attach_money, label: 'Base Salary', value: _userData!.salary.toStringAsFixed(2)),
+                const SizedBox(height: 30),
+
+                // --- THIS IS THE NEW BUTTON ---
+                Card(
+                  elevation: 2,
+                  child: ListTile(
+                    leading: Icon(Icons.receipt_long_rounded, color: Theme.of(context).primaryColor),
+                    title: const Text("View Salary Report", style: TextStyle(fontWeight: FontWeight.bold)),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: _navigateToSalaryReport,
+                  ),
+                ),
+                // -----------------------------
+
+                const SizedBox(height: 30),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.logout),
                   label: const Text('Logout'),
@@ -89,17 +111,16 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   Widget build(BuildContext context) {
     final String userNameForShell = _userData?.fullName.split(' ')[0] ?? 'User';
 
-    // Conditionally choose the correct page shell
     if (widget.isHr) {
       return HrPageShell(
-        selectedNavIndex: 3, // Corresponds to 'Profile' in the HR nav
+        selectedNavIndex: 3,
         userName: userNameForShell,
         child: _buildContent(),
       );
     }
 
     return EmployeePageShell(
-      selectedNavIndex: 2, // Corresponds to 'Profile' in the Employee nav
+      selectedNavIndex: 3, // Updated index to match the new nav bar
       userName: userNameForShell,
       child: _buildContent(),
     );

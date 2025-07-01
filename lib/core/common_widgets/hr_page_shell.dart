@@ -9,7 +9,7 @@ class HrPageShell extends StatelessWidget {
     Key? key,
     required this.child,
     required this.selectedNavIndex,
-    this.userName = "User",
+    this.userName = "HR",
   }) : super(key: key);
 
   void _onNavItemTapped(BuildContext context, int index) {
@@ -17,13 +17,13 @@ class HrPageShell extends StatelessWidget {
 
     switch (index) {
       case 0:
-        Navigator.pushReplacementNamed(context, '/hr_home'); 
+        Navigator.pushReplacementNamed(context, '/hr_home');
         break;
       case 1:
-        // Navigator.pushReplacementNamed(context, '/hr_requests');
+        Navigator.pushReplacementNamed(context, '/hr_requests');
         break;
       case 2:
-        // Navigator.pushReplacementNamed(context, '/hr_reports');
+        Navigator.pushReplacementNamed(context, '/hr_timesheet');
         break;
       case 3:
         Navigator.pushReplacementNamed(context, '/hr_profile');
@@ -39,7 +39,7 @@ class HrPageShell extends StatelessWidget {
       backgroundColor: primaryColor,
       appBar: AppBar(
         title: Text('Hello $userName 👋 (HR)', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-        leading: const Padding(padding: EdgeInsets.only(left: 15.0), child: Icon(Icons.account_circle, size: 40, color: Colors.white)),
+        leading: const Padding(padding: EdgeInsets.only(left: 15.0), child: Icon(Icons.manage_accounts, size: 40, color: Colors.white)),
         leadingWidth: 60,
         backgroundColor: primaryColor,
         elevation: 0,
@@ -60,9 +60,9 @@ class HrPageShell extends StatelessWidget {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'Clock In/Out'),
-          BottomNavigationBarItem(icon: Icon(Icons.mail_outline), label: 'Requests'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Reports'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.inbox_rounded), label: 'Requests'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'My Timesheet'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'My Profile'),
         ],
       ),
     );

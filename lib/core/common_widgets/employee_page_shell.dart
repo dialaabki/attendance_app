@@ -23,6 +23,9 @@ class EmployeePageShell extends StatelessWidget {
         Navigator.pushReplacementNamed(context, '/employee_timesheet');
         break;
       case 2:
+        Navigator.pushReplacementNamed(context, '/my_benefits');
+        break;
+      case 3: 
         Navigator.pushReplacementNamed(context, '/employee_profile');
         break;
     }
@@ -58,6 +61,7 @@ class EmployeePageShell extends StatelessWidget {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.timer), label: 'Clock In/Out'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'My Timesheet'),
+          BottomNavigationBarItem(icon: Icon(Icons.card_giftcard_rounded), label: 'My Benefits'), // New Icon
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

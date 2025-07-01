@@ -10,6 +10,11 @@ import 'package:attendance_app/features/attendance/presentation/pages/employee_t
 import 'package:attendance_app/features/attendance/presentation/pages/filtered_employee_list_page.dart';
 import 'package:attendance_app/features/attendance/presentation/pages/timesheet_details_page.dart';
 import 'package:attendance_app/features/attendance/business/usecases/get_filtered_employees.dart';
+
+import 'package:attendance_app/features/leave_management/presentation/pages/hr_requests_page.dart';
+import 'package:attendance_app/features/leave_management/presentation/pages/my_benefits_page.dart';
+import 'package:attendance_app/features/attendance/presentation/pages/hr_timesheet_page.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
@@ -59,10 +64,13 @@ class MyApp extends StatelessWidget {
         // Employee Routes
         '/employee_home': (context) => const EmployeeHomePage(),
         '/employee_timesheet': (context) => const EmployeeTimesheetPage(),
+        '/my_benefits': (context) => const MyBenefitsPage(),
         '/employee_profile': (context) => const EmployeeProfilePage(),
 
-        // --- HR ROUTES ---
-        '/hr_home': (context) => const EmployeeHomePage(isHr: true), 
+        // HR ROUTES
+        '/hr_home': (context) => const EmployeeHomePage(isHr: true),
+        '/hr_requests': (context) => const HrRequestsPage(),
+        '/hr_timesheet': (context) => const HrTimesheetPage(),
         '/hr_profile': (context) => const EmployeeProfilePage(isHr: true),
       },
     );
