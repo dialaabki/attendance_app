@@ -1,6 +1,19 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
+class LeaveBalanceEntity extends Equatable {
+  final String leaveType;
+  final int totalDays;
+
+  const LeaveBalanceEntity({
+    required this.leaveType,
+    required this.totalDays,
+  });
+
+  @override
+  List<Object?> get props => [leaveType, totalDays];
+}
+
 class CustomScheduleEntity extends Equatable {
   final String day;
   final TimeOfDay startTime;
@@ -16,7 +29,6 @@ class CustomScheduleEntity extends Equatable {
   List<Object?> get props => [day, startTime, endTime];
 }
 
-
 class UserEntity extends Equatable {
   final String uid;
   final String email;
@@ -31,6 +43,7 @@ class UserEntity extends Equatable {
   final double longitude;
   final List<CustomScheduleEntity> customSchedules;
   final double salary;
+  final List<LeaveBalanceEntity> leaveBalances;
 
   const UserEntity({
     required this.uid,
@@ -46,6 +59,7 @@ class UserEntity extends Equatable {
     required this.longitude,
     required this.customSchedules,
     required this.salary,
+    required this.leaveBalances,
   });
 
   @override
@@ -63,5 +77,6 @@ class UserEntity extends Equatable {
         longitude,
         customSchedules,
         salary,
+        leaveBalances,
       ];
 }

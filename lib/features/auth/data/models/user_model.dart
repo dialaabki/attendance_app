@@ -2,6 +2,7 @@ import 'package:attendance_app/features/auth/business/entities/user_entity.dart'
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+// Helper function placed at the top level for reuse.
 TimeOfDay _parseTimeOfDay(String time) {
   try {
     final parts = time.split(':');
@@ -11,6 +12,7 @@ TimeOfDay _parseTimeOfDay(String time) {
   }
 }
 
+// Model for Custom Schedules
 class CustomScheduleModel extends CustomScheduleEntity {
   const CustomScheduleModel({required super.day, required super.startTime, required super.endTime});
   
@@ -21,16 +23,21 @@ class CustomScheduleModel extends CustomScheduleEntity {
       endTime: _parseTimeOfDay(map['endTime'] ?? '17:00'),
     );
   }
+}
 
-  Map<String, String> toMap() {
-    return {
-      'day': day,
-      'startTime': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
-      'endTime': '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
-    };
+// Model for Leave Balances
+class LeaveBalanceModel extends LeaveBalanceEntity {
+  const LeaveBalanceModel({required super.leaveType, required super.totalDays});
+
+  factory LeaveBalanceModel.fromMap(Map<String, dynamic> map) {
+    return LeaveBalanceModel(
+      leaveType: map['leaveType'] ?? 'Unknown',
+      totalDays: map['totalDays'] ?? 0,
+    );
   }
 }
 
+// The main UserModel
 class UserModel extends UserEntity {
   const UserModel({
     required super.uid,
@@ -46,6 +53,8 @@ class UserModel extends UserEntity {
     required super.longitude,
     required super.customSchedules,
     required super.salary,
+    // --- THIS IS THE FIX ---
+    required super.leaveBalances, 
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -53,6 +62,12 @@ class UserModel extends UserEntity {
     
     final List<CustomScheduleEntity> schedules = (data['customSchedules'] as List<dynamic>?)
         ?.map((scheduleMap) => CustomScheduleModel.fromMap(scheduleMap as Map<String, dynamic>))
+        .toList() ?? [];
+
+    // --- THIS IS THE FIX ---
+    // Safely parse leave balances from the Firestore data
+    final List<LeaveBalanceEntity> balances = (data['leaveBalances'] as List<dynamic>?)
+        ?.map((balanceMap) => LeaveBalanceModel.fromMap(balanceMap as Map<String, dynamic>))
         .toList() ?? [];
 
     return UserModel(
@@ -69,6 +84,7 @@ class UserModel extends UserEntity {
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
       customSchedules: schedules,
       salary: (data['salary'] as num?)?.toDouble() ?? 0.0,
+      leaveBalances: balances,
     );
   }
 }

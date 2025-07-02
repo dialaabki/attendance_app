@@ -29,8 +29,8 @@ class AddEmployeeParams extends Equatable {
   final double latitude;
   final double longitude;
   final List<CustomScheduleEntity> customSchedules;
-  // --- ADD THIS ---
   final double salary;
+  final List<LeaveBalanceEntity> leaveBalances;
 
   const AddEmployeeParams({
     required this.fullName,
@@ -46,10 +46,11 @@ class AddEmployeeParams extends Equatable {
     required this.longitude,
     required this.customSchedules,
     required this.salary,
+    required this.leaveBalances,
   });
 
   @override
   List<Object?> get props => [
-    email, fullName, role, type, locationName, latitude, longitude, customSchedules, salary
+    email, fullName, role, type, locationName, latitude, longitude, customSchedules, salary, leaveBalances
   ];
 }

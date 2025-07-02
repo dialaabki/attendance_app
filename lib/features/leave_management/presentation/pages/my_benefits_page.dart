@@ -22,16 +22,11 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
   final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
   
-  String _selectedRequestType = 'Vacation';
+  String? _selectedRequestType; // Make nullable to handle initial state
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
-  // Stream for the history and balance sections
   Stream<dartz.Either<dynamic, List<LeaveRequestEntity>>>? _requestsStream;
-
-  // Constants for total leave days
-  final int _totalVacationDays = 14;
-  final int _totalSickDays = 14;
 
   @override
   void initState() {
@@ -49,8 +44,11 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
         (user) {
           setState(() {
             _currentUser = user;
-            // Initialize the stream here, once, so it can be reused
             _requestsStream = sl<GetMyRequests>().watch(user.uid);
+            // Set the default dropdown value to the first available leave type
+            if (user.leaveBalances.isNotEmpty) {
+              _selectedRequestType = user.leaveBalances.first.leaveType;
+            }
           });
         },
       );
@@ -61,7 +59,7 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)), // Allow requesting for recent past (e.g., sick leave)
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null && picked != _selectedDate) {
@@ -72,7 +70,7 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
   }
 
   void _submitRequest() async {
-    if (_currentUser == null || !_formKey.currentState!.validate()) {
+    if (_currentUser == null || _selectedRequestType == null || !_formKey.currentState!.validate()) {
       return;
     }
     setState(() => _isSubmitting = true);
@@ -80,7 +78,7 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
     final params = SubmitRequestParams(
       userId: _currentUser!.uid,
       userName: _currentUser!.fullName,
-      requestType: _selectedRequestType,
+      requestType: _selectedRequestType!,
       date: _selectedDate,
       reason: _reasonController.text.trim(),
     );
@@ -110,7 +108,7 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
   @override
   Widget build(BuildContext context) {
     return EmployeePageShell(
-      selectedNavIndex: 2, // Corresponds to 'My Benefits'
+      selectedNavIndex: 2,
       userName: _currentUser?.fullName.split(' ')[0] ?? "User",
       child: ListView(
         padding: const EdgeInsets.all(20.0),
@@ -126,24 +124,26 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
   }
 
   Widget _buildBalanceSection() {
+    if (_currentUser == null) {
+      return const Card(child: Center(child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator())));
+    }
+    
     return StreamBuilder<dartz.Either<dynamic, List<LeaveRequestEntity>>>(
       stream: _requestsStream,
       builder: (context, snapshot) {
-        int approvedVacations = 0;
-        int approvedSickLeaves = 0;
-
+        final usedDaysMap = <String, int>{};
         if (snapshot.hasData) {
           snapshot.data!.fold(
-            (l) => null, // Left (failure) case
+            (l) => null,
             (requests) {
-              approvedVacations = requests.where((r) => r.requestType == 'Vacation' && r.status == 'Approved').length;
-              approvedSickLeaves = requests.where((r) => r.requestType == 'Sick Leave' && r.status == 'Approved').length;
+              for (var request in requests) {
+                if (request.status == 'Approved') {
+                  usedDaysMap[request.requestType] = (usedDaysMap[request.requestType] ?? 0) + 1;
+                }
+              }
             }
           );
         }
-
-        int remainingVacations = _totalVacationDays - approvedVacations;
-        int remainingSickLeaves = _totalSickDays - approvedSickLeaves;
 
         return Card(
           elevation: 2,
@@ -155,13 +155,20 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
               children: [
                 const Text("Leave Balances", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _balanceItem(Icons.beach_access_rounded, "Vacations Left", remainingVacations, Colors.blue),
-                    _balanceItem(Icons.sick_rounded, "Sick Leaves Left", remainingSickLeaves, Colors.red),
-                  ],
-                ),
+                if (_currentUser!.leaveBalances.isEmpty)
+                  const Text("No leave types have been assigned to you.")
+                else
+                  // Use a Wrap to handle multiple leave types gracefully
+                  Wrap(
+                    spacing: 16.0,
+                    runSpacing: 16.0,
+                    alignment: WrapAlignment.spaceAround,
+                    children: _currentUser!.leaveBalances.map((balance) {
+                      final usedDays = usedDaysMap[balance.leaveType] ?? 0;
+                      final remainingDays = balance.totalDays - usedDays;
+                      return _balanceItem(Icons.card_giftcard_rounded, balance.leaveType, remainingDays);
+                    }).toList(),
+                  )
               ],
             ),
           ),
@@ -170,18 +177,23 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
     );
   }
 
-  Widget _balanceItem(IconData icon, String label, int days, Color color) {
+  Widget _balanceItem(IconData icon, String label, int days) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 32),
+        Icon(icon, color: Theme.of(context).primaryColor, size: 32),
         const SizedBox(height: 8),
-        Text("$days", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text("$days Days", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         Text(label, style: const TextStyle(color: Colors.grey)),
       ],
     );
   }
 
   Widget _buildRequestForm() {
+    // If user or leave balances haven't loaded, don't show the form.
+    if (_currentUser == null || _currentUser!.leaveBalances.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -196,8 +208,9 @@ class _MyBenefitsPageState extends State<MyBenefitsPage> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedRequestType,
-                items: ['Vacation', 'Sick Leave']
-                    .map((label) => DropdownMenuItem(child: Text(label), value: label))
+                // Dynamically populate the dropdown from the user's assigned leave types
+                items: _currentUser!.leaveBalances
+                    .map((balance) => DropdownMenuItem(child: Text(balance.leaveType), value: balance.leaveType))
                     .toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _selectedRequestType = value);

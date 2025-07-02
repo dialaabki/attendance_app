@@ -19,6 +19,7 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
   final _salaryController = TextEditingController();
+  
   bool _isLoading = false;
 
   String _selectedRole = 'Employee';
@@ -28,8 +29,11 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
   final Set<String> _selectedDays = {'Sun', 'Mon', 'Tue', 'Wed', 'Thu'};
   final List<CustomScheduleEntity> _customSchedules = [];
 
-  // --- FIX IS HERE ---
-  // Add 'HR' to the list of roles that the admin can select.
+  final List<LeaveBalanceEntity> _leaveBalances = [
+    const LeaveBalanceEntity(leaveType: 'Annual Vacation', totalDays: 14),
+    const LeaveBalanceEntity(leaveType: 'Sick Leave', totalDays: 14),
+  ];
+
   final List<String> _roles = ['Employee', 'Admin', 'HR'];
   final List<String> _types = ['Full-Time', 'Part-Time', 'Contractor', 'Intern'];
   final List<String> _daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -69,6 +73,7 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
       longitude: double.tryParse(_longitudeController.text.trim()) ?? 0.0,
       customSchedules: _customSchedules,
       salary: double.tryParse(_salaryController.text.trim()) ?? 0.0,
+      leaveBalances: _leaveBalances,
     );
 
     final result = await addEmployeeUseCase(params);
@@ -79,7 +84,7 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message), backgroundColor: Colors.red));
         },
         (_) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User added successfully!'), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Employee added successfully!'), backgroundColor: Colors.green));
           Navigator.of(context).pop();
         },
       );
@@ -133,12 +138,28 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
     }
   }
 
+  void _addLeaveType() {
+    setState(() {
+      _leaveBalances.add(const LeaveBalanceEntity(leaveType: 'New Leave Type', totalDays: 0));
+    });
+  }
+
+  void _removeLeaveType(int index) {
+    if (_leaveBalances.length > 1) {
+      setState(() {
+        _leaveBalances.removeAt(index);
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cannot remove the last leave type.")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFFDAC844);
 
     return AdminPageShell(
-      title: 'Add User',
+      title: 'Add Employee',
       showBackButton: true,
       child: Form(
         key: _formKey,
@@ -156,15 +177,16 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
             
             _buildSectionTitle('Financial'),
             _buildTextField(label: 'Monthly Salary (e.g., 500)', controller: _salaryController, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-
+            
+            _buildLeaveAllowancesSection(),
+            
             _buildSectionTitle('Standard Schedule'),
             const SizedBox(height: 10),
             _buildDaySelector(),
             const SizedBox(height: 20),
             _buildTimePickerRow(label: 'From:', time: _standardStartTime, onSelectTime: () => _selectTime(context, isStartTime: true)),
             _buildTimePickerRow(label: 'To:', time: _standardEndTime, onSelectTime: () => _selectTime(context, isStartTime: false)),
-            const SizedBox(height: 20),
-
+            
             _buildCustomSchedulesSection(),
             const SizedBox(height: 20),
 
@@ -192,6 +214,8 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
     );
   }
 
+  // --- WIDGET BUILDER HELPERS ---
+
   Widget _buildSectionTitle(String title) => Padding(
      padding: const EdgeInsets.only(top: 20.0, bottom: 8.0),
      child: Text(title, style: TextStyle(fontSize: 18, color: Colors.grey[800], fontWeight: FontWeight.bold)),
@@ -218,10 +242,7 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
             if(isPassword && value.length < 6){
               return 'Password must be at least 6 characters';
             }
-            if(keyboardType == const TextInputType.numberWithOptions(decimal: true) && double.tryParse(value) == null) {
-              return 'Please enter a valid number';
-            }
-            if(keyboardType == const TextInputType.numberWithOptions(decimal: true, signed: true) && double.tryParse(value) == null) {
+            if((keyboardType?.toString().contains('number') ?? false) && double.tryParse(value) == null) {
               return 'Please enter a valid number';
             }
             return null;
@@ -280,6 +301,66 @@ class _AddEmployeePageState extends State<AddEmployeePage> {
     );
   }
   
+  Widget _buildLeaveAllowancesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Leave Allowances'),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _leaveBalances.length,
+          itemBuilder: (context, index) {
+            final balance = _leaveBalances[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0).copyWith(left: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: TextFormField(
+                        initialValue: balance.leaveType,
+                        decoration: const InputDecoration(labelText: 'Leave Type Name', border: InputBorder.none),
+                        onChanged: (value) {
+                          _leaveBalances[index] = LeaveBalanceEntity(leaveType: value, totalDays: balance.totalDays);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: TextFormField(
+                        initialValue: balance.totalDays.toString(),
+                        decoration: const InputDecoration(labelText: 'Total Days', border: InputBorder.none),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final days = int.tryParse(value) ?? 0;
+                          _leaveBalances[index] = LeaveBalanceEntity(leaveType: balance.leaveType, totalDays: days);
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () => _removeLeaveType(index),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: _addLeaveType,
+          icon: const Icon(Icons.add_circle_outline),
+          label: const Text("Add Another Leave Type"),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCustomSchedulesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

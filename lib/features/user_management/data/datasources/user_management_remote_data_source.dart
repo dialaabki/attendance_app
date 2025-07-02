@@ -66,7 +66,14 @@ class UserManagementRemoteDataSourceImpl implements UserManagementRemoteDataSour
                 })
             .toList(),
         'salary': params.salary,
+        'leaveBalances': params.leaveBalances
+            .map((balance) => {
+                  'leaveType': balance.leaveType,
+                  'totalDays': balance.totalDays,
+                })
+            .toList(),
       };
+      // ---------------------------------
 
       await firestore.collection('users').doc(credential.user!.uid).set(userData);
     } on FirebaseAuthException catch (e) {
@@ -80,7 +87,7 @@ class UserManagementRemoteDataSourceImpl implements UserManagementRemoteDataSour
       if (cred != null && cred.user != null) {
         await cred.user!.delete();
       }
-      throw ServerException('An unexpected error occurred while adding employee.');
+      throw ServerException('An unexpected error occurred while adding employee: ${e.toString()}');
     } finally {
       if (tempApp != null) {
         await tempApp.delete();
