@@ -1,6 +1,8 @@
+import 'package:attendance_app/core/services/pdf_service.dart';
 import 'package:attendance_app/features/auth/business/entities/user_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart'; 
 
 class SalaryReportPage extends StatefulWidget {
   final UserEntity user;
@@ -12,7 +14,6 @@ class SalaryReportPage extends StatefulWidget {
 }
 
 class _SalaryReportPageState extends State<SalaryReportPage> {
-  // --- Constants for Calculation ---
   final double socialSecurityPercentage = 0.075;
   final int workingDaysInMonth = 22;
   final int standardHoursInDay = 8;
@@ -21,13 +22,17 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
   final int lateDays = 2;
   final int absentDays = 1;
 
-  // --- State variables for calculated values ---
   late double hourlyWage;
   late double socialSecurityDeduction;
   late double lateDeduction;
   late double absenceDeduction;
   late double overtimePay;
   late double netSalary;
+
+  // --- ADD THESE NEW STATE VARIABLES ---
+  bool _isExporting = false;
+  final PdfSalaryService _pdfService = PdfSalaryService();
+
 
   @override
   void initState() {
@@ -36,30 +41,51 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
   }
 
   void _calculateSalary() {
+    // This method remains exactly the same
     final baseSalary = widget.user.salary;
     final standardHoursInMonth = workingDaysInMonth * standardHoursInDay;
-
-    // 1. Calculate base hourly and daily wage
     hourlyWage = baseSalary / standardHoursInMonth;
     final dailyWage = baseSalary / workingDaysInMonth;
-
-    // 2. Calculate Overtime
     final overtimeHours = totalHoursWorkedThisMonth - standardHoursInMonth;
     if (overtimeHours > 0) {
       overtimePay = overtimeHours * hourlyWage * overtimeRateMultiplier;
     } else {
       overtimePay = 0.0;
     }
-
-    // 3. Calculate Deductions
     socialSecurityDeduction = baseSalary * socialSecurityPercentage;
-    lateDeduction = lateDays * hourlyWage; // Assuming 1 hour lost per late day
+    lateDeduction = lateDays * hourlyWage;
     absenceDeduction = absentDays * dailyWage;
-
-    // 4. Calculate Final Net Salary
-    // Net Salary = Base Salary + Overtime Pay - All Deductions
     netSalary = baseSalary + overtimePay - socialSecurityDeduction - lateDeduction - absenceDeduction;
   }
+
+  // --- ADD THIS NEW METHOD ---
+  Future<void> _exportToPdf() async {
+    setState(() => _isExporting = true);
+    try {
+      final month = DateFormat.yMMMM().format(DateTime.now());
+      final pdfData = await _pdfService.generateSalaryPdf(
+        user: widget.user,
+        month: month,
+        baseSalary: widget.user.salary,
+        overtimePay: overtimePay,
+        socialSecurityDeduction: socialSecurityDeduction,
+        lateDeduction: lateDeduction,
+        absenceDeduction: absenceDeduction,
+        netSalary: netSalary,
+      );
+      
+      // Use the printing package for a simple share/save dialog
+      await Printing.sharePdf(bytes: pdfData, filename: 'Salary-Report-$month.pdf');
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate PDF: $e'), backgroundColor: Colors.red));
+    } finally {
+      if(mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +96,16 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
         title: const Text('Salary Report'),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        // --- ADD THE EXPORT BUTTON HERE ---
+        actions: [
+          IconButton(
+            onPressed: _isExporting ? null : _exportToPdf,
+            icon: _isExporting 
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3,))
+                  : const Icon(Icons.picture_as_pdf),
+            tooltip: 'Export as PDF',
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20.0),
@@ -86,6 +122,7 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
     );
   }
 
+  // --- All your _build... helper methods remain exactly the same ---
   Widget _buildReportHeader() {
     return Column(
       children: [
@@ -107,7 +144,6 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
             const Text("Earnings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
             const Divider(),
             _buildReportRow("Base Salary", widget.user.salary, isEarning: true),
-            // --- ADDED THIS ROW ---
             _buildReportRow("Overtime Pay", overtimePay, isEarning: true),
           ],
         ),
@@ -157,7 +193,6 @@ class _SalaryReportPageState extends State<SalaryReportPage> {
   }
 
   Widget _buildReportRow(String title, double amount, {bool isEarning = false}) {
-    // Hide the row if the amount is zero (e.g., no overtime)
     if (amount == 0 && isEarning) return const SizedBox.shrink();
 
     return Padding(
