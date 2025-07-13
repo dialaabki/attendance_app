@@ -44,6 +44,7 @@ class UserEntity extends Equatable {
   final List<CustomScheduleEntity> customSchedules;
   final double salary;
   final List<LeaveBalanceEntity> leaveBalances;
+  final String? trustedDeviceId;
 
   const UserEntity({
     required this.uid,
@@ -60,6 +61,7 @@ class UserEntity extends Equatable {
     required this.customSchedules,
     required this.salary,
     required this.leaveBalances,
+    this.trustedDeviceId,
   });
 
   @override
@@ -78,5 +80,6 @@ class UserEntity extends Equatable {
         customSchedules,
         salary,
         leaveBalances,
+        trustedDeviceId,
       ];
 }

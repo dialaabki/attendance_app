@@ -53,8 +53,8 @@ class UserModel extends UserEntity {
     required super.longitude,
     required super.customSchedules,
     required super.salary,
-    // --- THIS IS THE FIX ---
     required super.leaveBalances, 
+    required super.trustedDeviceId,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -64,8 +64,7 @@ class UserModel extends UserEntity {
         ?.map((scheduleMap) => CustomScheduleModel.fromMap(scheduleMap as Map<String, dynamic>))
         .toList() ?? [];
 
-    // --- THIS IS THE FIX ---
-    // Safely parse leave balances from the Firestore data
+
     final List<LeaveBalanceEntity> balances = (data['leaveBalances'] as List<dynamic>?)
         ?.map((balanceMap) => LeaveBalanceModel.fromMap(balanceMap as Map<String, dynamic>))
         .toList() ?? [];
@@ -85,6 +84,8 @@ class UserModel extends UserEntity {
       customSchedules: schedules,
       salary: (data['salary'] as num?)?.toDouble() ?? 0.0,
       leaveBalances: balances,
+      trustedDeviceId: data['trustedDeviceId'],
+      
     );
   }
 }

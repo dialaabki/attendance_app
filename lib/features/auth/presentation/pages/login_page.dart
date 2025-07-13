@@ -1,9 +1,11 @@
 import 'package:attendance_app/features/auth/business/usecases/login_user.dart';
 import 'package:attendance_app/service_locator.dart';
 import 'package:flutter/material.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
-import 'unverified_email_page.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io';
+import 'verify_device_page.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -26,13 +28,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
 
     final loginUseCase = sl<LoginUser>();
     final result = await loginUseCase(
@@ -51,44 +48,108 @@ class _LoginPageState extends State<LoginPage> {
       (failure) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${failure.message}'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('Login failed: ${failure.message}'),
+              backgroundColor: Colors.red),
         );
       },
-      (user) {
+      (userEntity) async {
         final firebaseUser = FirebaseAuth.instance.currentUser;
+        if (firebaseUser == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not find user session.')));
+          return;
+        }
 
-        // Check if the user's email is verified
-        if (firebaseUser != null && !firebaseUser.emailVerified) {
-          // If NOT verified, show the dedicated page and stop the login
+        // --- DEVICE ID VERIFICATION LOGIC ---
+        // Must reload to get the latest email verification status from Firebase
+        await firebaseUser.reload();
+        final bool isEmailVerified = firebaseUser.emailVerified;
+
+        if (!isEmailVerified) {
+          // **Case 1: First-ever login.** User must verify their email.
           print('Login blocked: Email not verified.');
           Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const UnverifiedEmailPage(),
+            builder: (_) => VerifyDevicePage(userRole: userEntity.role),
           ));
-          return; // Stop the login process
+          return;
         }
-        
-        // If email IS verified, proceed to the correct home page
-        print('Email is verified. Logging in.');
-        if (user.role == 'Admin') {
-          Navigator.pushReplacementNamed(context, '/admin_home');
-        } else if (user.role == 'HR') {
-          Navigator.pushReplacementNamed(context, '/hr_home');
+
+        // Email is verified, now check the device
+        final String? currentDeviceId = await _getDeviceId();
+        final String? trustedDeviceId = userEntity.trustedDeviceId;
+
+        if (trustedDeviceId == null) {
+          // **Case 2: First login on ANY device after email verification.**
+          // We trust this device immediately and save its ID.
+          print('First login on a device. Trusting this device and logging in.');
+          if (currentDeviceId != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userEntity.uid)
+                .update({
+              'trustedDeviceId': currentDeviceId,
+            });
+          }
+          _navigateToHome(userEntity.role);
+        } else if (currentDeviceId != trustedDeviceId) {
+          // **Case 3: User is on a new, untrusted device.**
+          // Force them to re-verify their email to trust this new device.
+          print('Login blocked: Untrusted device. Forcing re-verification.');
+          // NOTE: We can't set emailVerified to false, so we just send a new link
+          // and treat the flow as if they need to verify again.
+          await firebaseUser.sendEmailVerification();
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => VerifyDevicePage(
+              userRole: userEntity.role,
+              isNewDevice: true, // Tell the page to show specific text
+            ),
+          ));
         } else {
-          Navigator.pushReplacementNamed(context, '/employee_home');
+          // **Case 4: User is on their known, trusted device.**
+          print('Trusted device login successful.');
+          _navigateToHome(userEntity.role);
         }
       },
     );
 
-    // This will now correctly handle the loading state
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
-  // ------------------------------------------
+
+  void _navigateToHome(String role) {
+    String route;
+    switch (role) {
+      case 'Admin':
+        route = '/admin_home';
+        break;
+      case 'HR':
+        route = '/hr_home';
+        break;
+      default:
+        route = '/employee_home';
+    }
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
+    }
+  }
+
+  // Helper function to get the unique device ID
+  Future<String?> _getDeviceId() async {
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor;
+      } else if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id;
+      }
+    } catch (e) {
+      print('Failed to get device ID: $e');
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,13 +165,15 @@ class _LoginPageState extends State<LoginPage> {
               flex: 2,
               child: Container(
                 alignment: Alignment.center,
-                child: Image.asset('assets/images/falcons_logo.png', height: 500),
+                child:
+                    Image.asset('assets/images/falcons_logo.png', height: 500),
               ),
             ),
             Expanded(
               flex: 3,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 30.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 25.0, vertical: 30.0),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
