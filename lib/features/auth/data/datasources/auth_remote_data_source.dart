@@ -1,4 +1,5 @@
 import 'package:attendance_app/core/errors/exceptions.dart';
+import 'package:attendance_app/core/services/notification_service.dart'; 
 import 'package:attendance_app/features/auth/data/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,8 +13,13 @@ abstract class AuthRemoteDataSource {
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final FirebaseAuth firebaseAuth;
   final FirebaseFirestore firestore;
+ // final NotificationService notificationService;
 
-  AuthRemoteDataSourceImpl({required this.firebaseAuth, required this.firestore});
+  AuthRemoteDataSourceImpl({
+    required this.firebaseAuth,
+    required this.firestore,
+   // required this.notificationService,
+  });
 
   @override
   Future<UserModel> login(String email, String password) async {
@@ -22,6 +28,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (credential.user == null) {
         throw ServerException('Login failed, please try again.');
       }
+
+     /* final String? token = await notificationService.getDeviceToken();
+      if (token != null) {
+       
+        await firestore.collection('users').doc(credential.user!.uid).set(
+          { 'deviceToken': token },
+          SetOptions(merge: true),
+        );
+      }
+*/
       return await _getUserFromFirestore(credential.user!.uid);
     } on FirebaseAuthException catch (e) {
       throw ServerException(e.message ?? 'An unknown auth error occurred.');
@@ -32,6 +48,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> logout() async {
+  
     await firebaseAuth.signOut();
   }
 

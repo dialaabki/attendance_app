@@ -2,6 +2,9 @@ import 'package:attendance_app/features/auth/business/usecases/login_user.dart';
 import 'package:attendance_app/service_locator.dart';
 import 'package:flutter/material.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'unverified_email_page.dart'; 
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -39,9 +42,12 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
-    result.fold(
+    await result.fold(
       (failure) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -51,21 +57,38 @@ class _LoginPageState extends State<LoginPage> {
         );
       },
       (user) {
+        final firebaseUser = FirebaseAuth.instance.currentUser;
+
+        // Check if the user's email is verified
+        if (firebaseUser != null && !firebaseUser.emailVerified) {
+          // If NOT verified, show the dedicated page and stop the login
+          print('Login blocked: Email not verified.');
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => const UnverifiedEmailPage(),
+          ));
+          return; // Stop the login process
+        }
+        
+        // If email IS verified, proceed to the correct home page
+        print('Email is verified. Logging in.');
         if (user.role == 'Admin') {
           Navigator.pushReplacementNamed(context, '/admin_home');
         } else if (user.role == 'HR') {
           Navigator.pushReplacementNamed(context, '/hr_home');
-        }
-        else {
+        } else {
           Navigator.pushReplacementNamed(context, '/employee_home');
         }
       },
     );
 
-    setState(() {
-      _isLoading = false;
-    });
+    // This will now correctly handle the loading state
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
+  // ------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -99,9 +122,15 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Log in', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, fontFamily: 'Serif', color: primaryColor)),
+                      const Text('Log in',
+                          style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Serif',
+                              color: primaryColor)),
                       const SizedBox(height: 30),
-                      const Text('Username', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                      const Text('Username',
+                          style: TextStyle(fontSize: 16, color: Colors.grey)),
                       const SizedBox(height: 5),
                       TextFormField(
                         controller: _emailController,
@@ -109,13 +138,19 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 20),
                         ),
-                        validator: (value) => (value?.isEmpty ?? true) ? 'Please enter your email' : null,
+                        validator: (value) => (value?.isEmpty ?? true)
+                            ? 'Please enter your email'
+                            : null,
                       ),
                       const SizedBox(height: 20),
-                      const Text('Password', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                      const Text('Password',
+                          style: TextStyle(fontSize: 16, color: Colors.grey)),
                       const SizedBox(height: 5),
                       TextFormField(
                         controller: _passwordController,
@@ -123,10 +158,15 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(50),
+                              borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 20),
                         ),
-                         validator: (value) => (value?.isEmpty ?? true) ? 'Please enter your password' : null,
+                        validator: (value) => (value?.isEmpty ?? true)
+                            ? 'Please enter your password'
+                            : null,
                       ),
                       const SizedBox(height: 40),
                       SizedBox(
@@ -135,15 +175,20 @@ class _LoginPageState extends State<LoginPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
                             padding: const EdgeInsets.symmetric(vertical: 20),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50)),
                             elevation: 5,
                           ),
                           onPressed: _isLoading ? null : _login,
                           child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white)
                               : const Text(
                                   'Log in',
-                                  style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
                                 ),
                         ),
                       ),

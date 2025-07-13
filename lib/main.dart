@@ -10,6 +10,8 @@ import 'package:attendance_app/features/attendance/presentation/pages/employee_t
 import 'package:attendance_app/features/attendance/presentation/pages/filtered_employee_list_page.dart';
 import 'package:attendance_app/features/attendance/presentation/pages/timesheet_details_page.dart';
 import 'package:attendance_app/features/attendance/business/usecases/get_filtered_employees.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 
 import 'package:attendance_app/features/leave_management/presentation/pages/hr_requests_page.dart';
 import 'package:attendance_app/features/leave_management/presentation/pages/my_benefits_page.dart';
@@ -25,6 +27,37 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+   FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+  try {
+    await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    // Get and print the token for testing
+    String? token = await messaging.getToken();
+    print("FCM Token: $token");
+
+    // Listen for messages while the app is in the foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Foreground Message data: ${message.data}');
+      if (message.notification != null) {
+        print('Message also contained a notification: ${message.notification}');
+
+      }
+    });
+
+  } catch (e) {
+    print("Failed to initialize FCM: $e");
+  }
+
   await di.init();
   runApp(const MyApp());
 }
